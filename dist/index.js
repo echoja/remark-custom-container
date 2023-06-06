@@ -116,7 +116,8 @@ const plugin = (options) => {
                         defaultClassName: settings.className,
                         className: className.toLowerCase(),
                         title,
-                        additionalProperties: settings.additionalProperties,
+                        additionalProperties: optionByClassName?.additionalProperties ||
+                            settings.additionalProperties,
                     });
                     children.push(container);
                     currentIndex = innerIndex - 1;
