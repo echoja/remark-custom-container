@@ -24,15 +24,46 @@ export interface CustomContainerOptions {
   /**
    * @defaultValue undefined
    */
-  additionalProperties?: (className?: string, title?: string) => Record<string, unknown>;
+  additionalProperties?: (
+    className?: string,
+    title?: string
+  ) => Record<string, unknown>;
+
+  /**
+   * @defaultValue undefined
+   */
+  optionsByClassName?: {
+    /** className selector. */
+    selector: string;
+    /**
+     * @defaultValue "div"
+     */
+    containerTag?: string;
+    /**
+     * @defaultValue "div"
+     */
+    titleTag?: string;
+    /**
+     * @defaultValue {className: string[]}
+     */
+    titleElement?: Record<string, unknown> | null;
+    /**
+     * @defaultValue undefined
+     */
+    additionalProperties?: (
+      className?: string,
+      title?: string
+    ) => Record<string, unknown>;
+  }[];
 }
 
-const DEFAULT_SETTINGS: CustomContainerOptions = {
+const DEFAULT_SETTINGS = {
   className: "remark-container",
   containerTag: "div",
   titleElement: {},
   additionalProperties: undefined,
-};
+  optionsByClassName: undefined,
+} satisfies CustomContainerOptions;
 
 const isLiteralNode = (node: Node): node is Literal => {
   return "value" in node;
@@ -42,48 +73,75 @@ const isParagraph = (node: Node): node is Paragraph => {
   return "paragraph" === node.type;
 };
 
+const constructTitle = ({
+  title,
+  defaultClassName,
+  titleElement,
+  tag = "div",
+}: {
+  title: string;
+  tag?: string;
+  defaultClassName: string;
+  titleElement: Record<string, unknown>;
+}): Paragraph => {
+  return {
+    type: "paragraph",
+    children: [{ type: "text", value: title }],
+    data: {
+      hName: tag,
+      hProperties: {
+        className: [`${defaultClassName}__title`],
+        ...titleElement,
+      },
+    },
+  };
+};
+
+// Constructs `Parent` node of custom directive which contains given children.
+const constructContainer = ({
+  children,
+  defaultClassName,
+  className,
+  title,
+  tag = "div",
+  additionalProperties,
+}: {
+  children: Node<Data>[];
+  defaultClassName: string;
+  className: string;
+  title?: string;
+  tag?: string;
+  additionalProperties?: (
+    className?: string,
+    title?: string
+  ) => Record<string, unknown>;
+}): Parent => {
+  let properties: Record<string, unknown> | undefined;
+
+  if (additionalProperties) {
+    properties = additionalProperties(className, title ?? "");
+  }
+
+  return {
+    type: "container",
+    children,
+    data: {
+      hName: tag,
+      hProperties: {
+        className: [defaultClassName, className.toLowerCase()],
+        ...(properties && { ...properties }),
+      },
+    },
+  };
+};
+
 export const plugin: Plugin<[CustomContainerOptions?]> = (
   options?: CustomContainerOptions
 ): Transformer => {
-  const settings = Object.assign({}, DEFAULT_SETTINGS, options);
-
-  // Constructs `Parent` node of custom directive which contains given children.
-  const constructContainer = (
-    children: Node<Data>[],
-    className: string,
-    title?: string,
-  ): Parent => {
-    let properties: Record<string, unknown> | undefined;
-
-    if (settings.additionalProperties) {
-      properties = settings.additionalProperties(className, title ?? "");
-    }
-
-    return {
-      type: "container",
-      children,
-      data: {
-        hName: settings.containerTag,
-        hProperties: {
-          className: [settings.className, className.toLowerCase()],
-          ...(properties && { ...properties }),
-        },
-      },
-    };
-  };
-
-  const constructTitle = (title: string): Paragraph => {
-    return {
-      type: "paragraph",
-      children: [{ type: "text", value: title }],
-      data: {
-        hName: "div",
-        hProperties: { 
-          className: [`${settings.className}__title`],
-          ...(settings.titleElement && { ...settings.titleElement }),
-        },
-      },
-    };
+  // const settings = Object.assign({}, DEFAULT_SETTINGS, options);
+  const settings = {
+    ...DEFAULT_SETTINGS,
+    ...options,
   };
 
   const transformer: Transformer = (tree: Node): void => {
@@ -99,45 +157,79 @@ export const plugin: Plugin<[CustomContainerOptions?]> = (
         // check if currentIndex of children contains begin node of custom directive
         const currentNode = parent.children[currentIndex];
         children.push(currentNode);
-        if (!isParagraph(currentNode)) continue;
+        if (!isParagraph(currentNode)) {
+          continue;
+        }
+
         // XXX: Consider checking other children in currentNode
         const currentElem = currentNode.children[0];
-        if (!isLiteralNode(currentElem)) continue;
+        if (!isLiteralNode(currentElem)) {
+          continue;
+        }
 
         const match = currentElem.value.match(REGEX_BEGIN);
-        if (!match) continue;
+        if (!match) {
+          continue;
+        }
+
         // Here we're inside of the custom directive. let's find nearest closing directive.
         // remove last element, which is custom directive marker.
         children.pop();
+
         const beginIndex = currentIndex;
         let innerIndex = currentIndex - 1;
         while (innerIndex < len - 1) {
           innerIndex += 1;
           const currentNode = parent.children[innerIndex];
-          if (!isParagraph(currentNode)) continue;
+          if (!isParagraph(currentNode)) {
+            continue;
+          }
+
           const currentElem = currentNode.children[0];
           if (
             !isLiteralNode(currentElem) ||
             !currentElem.value.match(REGEX_END)
-          )
+          ) {
             continue;
+          }
+
           // here we found the closing directive.
-          const [_input, type, title] = match;
+          const [_input, className, title] = match;
+
           // remove surrounding `:::` markers and treat rest of them as children of the container
           const containerChildren = parent.children.slice(
             beginIndex + 1,
             innerIndex
           );
+
+          const optionByClassName = settings.optionsByClassName?.find(
+            (option) => option.selector === className
+          );
+
           // if the title exists and the settings.titleElement is not null, then construct the title div element
-          if (title?.length && settings.titleElement !== null) {
-            containerChildren.splice(0, 0, constructTitle(title));
+          const titleElement =
+            optionByClassName?.titleElement || settings.titleElement;
+          if (title?.length && titleElement) {
+            containerChildren.splice(
+              0,
+              0,
+              constructTitle({
+                title,
+                defaultClassName: settings.className,
+                tag: optionByClassName?.titleTag,
+                titleElement,
+              })
+            );
           }
 
-          const container = constructContainer(
-            containerChildren,
-            type.toLowerCase(),
+          const container = constructContainer({
+            tag: optionByClassName?.containerTag || settings.containerTag,
+            children: containerChildren,
+            defaultClassName: settings.className,
+            className: className.toLowerCase(),
             title,
-          );
+            additionalProperties: settings.additionalProperties,
+          });
 
           children.push(container);
           currentIndex = innerIndex - 1;
