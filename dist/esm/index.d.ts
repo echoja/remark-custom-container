@@ -18,6 +18,29 @@ export interface CustomContainerOptions {
      * @defaultValue undefined
      */
     additionalProperties?: (className?: string, title?: string) => Record<string, unknown>;
+    /**
+     * @defaultValue undefined
+     */
+    optionsByClassName?: {
+        /** className selector. */
+        selector: string;
+        /**
+         * @defaultValue "div"
+         */
+        containerTag?: string;
+        /**
+         * @defaultValue "div"
+         */
+        titleTag?: string;
+        /**
+         * @defaultValue {className: string[]}
+         */
+        titleElement?: Record<string, unknown> | null;
+        /**
+         * @defaultValue undefined
+         */
+        additionalProperties?: (className?: string, title?: string) => Record<string, unknown>;
+    }[];
 }
 export declare const plugin: Plugin<[CustomContainerOptions?]>;
 export default plugin;
