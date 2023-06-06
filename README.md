@@ -38,9 +38,7 @@ will be rendered as follows
 
 ```html
 <div class="remark-container className">
-  <div class="remark-container__title">
-    Custom Title
-  </div>
+  <div class="remark-container__title">Custom Title</div>
   Container Body
 </div>
 ```
@@ -60,10 +58,7 @@ import stringify from "rehype-stringify";
 
 import container from "remark-custom-container";
 
-const html = await remark()
-  .use(container)
-  .use(remark2rehype)
-  .use(stringify);
+const html = await remark().use(container).use(remark2rehype).use(stringify);
 ```
 
 ## Options
@@ -74,6 +69,13 @@ use(container, {
   containerTag: string, // optional, default to "div"
   titleElement: Record<string, unknown> | null, // optional, default to { className: string[] }
   additionalProperties: (className?: string, title?: string) => Record<string, unknown>, // optional, default to undefined
+  optionsByClassName: Array<{
+    selector: string, // required, classname of the container
+    containerTag?: string, // optional, default to "div"
+    titleTag?: string, // optional, default to "div"
+    titleElement?: Record<string, unknown> | null, // optional, default to { className: string[] }
+    additionalProperties?: (className?: string, title?: string) => Record<string, unknown>,
+  }>,
 })
 ```
 
@@ -84,9 +86,7 @@ use(container, {
 **`titleElement`** is an option to construct custom _inner title div element_. The default is pre-defined `{ className: string[] }`, so the plugin is going to add an _inner title div element_ as a default. You can provide an object in order to set additional properties for the _inner title div element_. If you set `null`, the plugin is going to remove the _inner title div element_ like below.
 
 ```html
-<div class="remark-container className">
-  Container Body
-</div>
+<div class="remark-container className">Container Body</div>
 ```
 
 **`additionalProperties`** is an option to set additional properties for the custom container. It is a callback function that takes the `className` and the `title` as optional arguments and returns the object which is going to be used for adding additional properties into the container.
@@ -116,9 +116,49 @@ use(container, {
 is going to produce the container below:
 
 ```html
-<article class="remark-custom-classname warning" title="My Custom Title" data-type="warning">
+<article
+  class="remark-custom-classname warning"
+  title="My Custom Title"
+  data-type="warning"
+>
   <p>my paragraph</p>
 </article>
+```
+
+**`optionsByClassName`** is an option for setting tags and the like differently for each className. You can insert the class name into the selector and specify it similarly to the existing options. If the existing options and `optionsByClassName` overlap, the items in `optionsByClassName` will be applied first.
+
+example:
+
+```markdown
+::: details My Custom Details
+
+markdown content
+
+:::
+```
+
+```javascript
+use(container, {
+  optionsByClassName: [
+    {
+      selector: "details",
+      containerTag: "details",
+      titleTag: "summary",
+      titleElement: {
+        className: ["summary-title"],
+      },
+    },
+  ],
+});
+```
+
+is going to produce the container below:
+
+```html
+<details class="remark-container details">
+  <summary class="summary-title">My Custom Details</summary>
+  <p>markdown content</p>
+</details>
 ```
 
 **Note :** The `containerTag` is not prefered to be a `span` or similar, if there is an inner title `div` element. This may cause a problem because of a `div` element under a `span` element.
