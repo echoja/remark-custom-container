@@ -17,9 +17,9 @@ const compiler: Processor = remark()
         titleTag: "summary",
         titleElement: {
           className: ["summary-title"],
-        }
-      }
-    ]
+        },
+      },
+    ],
   })
   // to check if it handles HTML in markdown
   .use(remark2rehype, { allowDangerousHtml: true })
