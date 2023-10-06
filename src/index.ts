@@ -1,9 +1,8 @@
 import { visit } from "unist-util-visit";
 
-import type { Plugin, Transformer } from "unified";
-import type { Node, Literal, Parent } from "unist";
 import type { Paragraph } from "mdast";
-import type { Data } from "vfile";
+import type { Plugin, Transformer } from "unified";
+import type { Literal, Node, Parent } from "unist";
 
 export const REGEX_BEGIN = /^\s*:::\s*(\w+)\s*(.*)?/;
 export const REGEX_END = /^\s*:::$/;
@@ -106,7 +105,7 @@ const constructContainer = ({
   tag = "div",
   additionalProperties,
 }: {
-  children: Node<Data>[];
+  children: Node[];
   defaultClassName: string;
   className: string;
   title?: string;
@@ -145,10 +144,10 @@ export const plugin: Plugin<[CustomContainerOptions?]> = (
   };
 
   const transformer: Transformer = (tree: Node): void => {
-    visit(tree, (_node: Node, _index: number | null, parent?: Parent): void => {
+    visit(tree, (_node, _index, parent?: Parent): void => {
       if (!parent) return;
 
-      const children: Node<Data>[] = [];
+      const children: Node[] = [];
       const len = parent.children.length;
       // we walk through each children in `parent` to look for custom directive.
       let currentIndex = -1;

@@ -1,13 +1,13 @@
+import stringify from "rehype-stringify";
 import { remark } from "remark";
-import type { Processor } from "unified";
-import type { VFileCompatible } from "vfile";
 import gfm from "remark-gfm";
 import remark2rehype from "remark-rehype";
-import stringify from "rehype-stringify";
+import type { VFileCompatible } from "vfile";
+import { expect, it } from "vitest";
 
 import plugin from "..";
 
-const compiler: Processor = remark()
+const compiler = remark()
   .use(gfm)
   .use(plugin, {
     optionsByClassName: [

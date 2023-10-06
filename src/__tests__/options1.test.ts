@@ -1,24 +1,24 @@
+import stringify from "rehype-stringify";
 import { remark } from "remark";
-import type { Processor } from "unified";
-import type { VFileCompatible } from "vfile";
 import gfm from "remark-gfm";
 import remark2rehype from "remark-rehype";
-import stringify from "rehype-stringify";
+import type { VFileCompatible } from "vfile";
+import { describe, expect, it } from "vitest";
 
-import plugin, {type CustomContainerOptions} from "..";
+import plugin, { type CustomContainerOptions } from "..";
 
-const compiler: Processor = remark()
+const compiler = remark()
   .use(gfm)
   .use(plugin, {
     className: "remark-custom-classname",
     containerTag: "article",
     titleElement: null,
-    additionalProperties: (className, title) => { 
-      return  {
+    additionalProperties: (className, title) => {
+      return {
         title: title,
         ["data-type"]: className?.toLowerCase(),
-      }
-    } 
+      };
+    },
   } as CustomContainerOptions)
   // to check if it handles HTML in markdown
   .use(remark2rehype, { allowDangerousHtml: true })

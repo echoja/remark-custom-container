@@ -1,13 +1,13 @@
+import stringify from "rehype-stringify";
 import { remark } from "remark";
-import { Processor } from "unified";
-import type { VFileCompatible } from "vfile";
 import gfm from "remark-gfm";
 import remark2rehype from "remark-rehype";
-import stringify from "rehype-stringify";
+import type { VFileCompatible } from "vfile";
+import { describe, expect, it } from "vitest";
 
 import container, { REGEX_BEGIN } from "..";
 
-const compiler: Processor = remark()
+const compiler = remark()
   .use(gfm)
   .use(container, { className: "remark-container" })
   // to check if it handles HTML in markdown
