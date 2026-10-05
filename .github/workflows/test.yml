@@ -16,7 +16,7 @@ jobs:
     runs-on: echoja-remark-custom-container-linux
     strategy:
       matrix:
-        node-version: [ 18, 20 ]
+        node-version: [ 22, 24 ]
     steps:
       - uses: actions/checkout@v7
       - name: setup node ${{ matrix.node-version }}
